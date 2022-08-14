@@ -1,0 +1,8 @@
+{
+    "MARKETS": ["TROYBUSD", "BNBBUSD", "ENSBUSD", "MBOXBUSD", "XECBUSD"],
+    "SLEEP_TIME_SEC": 1,
+    "TIME_INTERVALS": ["1h", "6h", "1d", "3d"],
+    "MAX_RSI": 78,
+    "MIN_RSI": 25,
+    "MAIL_GAP_MIN": 30
+}
