@@ -1,5 +1,5 @@
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -10,11 +10,15 @@ app = FastAPI()
 print("Loading SQLCoder model... (This may take a while on CPU)")
 model_name = "defog/sqlcoder-7b-2"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+#  Fix: Add a new [PAD] token to prevent padding errors
+tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.float16,  # Lower precision for CPU efficiency
     device_map="cpu"
 )
+model.resize_token_embeddings(len(tokenizer))  #  Ensure the model knows about the new token
 
 # Store conversation history
 chat_history = []
@@ -34,7 +38,11 @@ def generate_sql(query: QueryRequest):
 
     # Tokenize input
     inputs = tokenizer(
-        formatted_input, return_tensors="pt", padding=True, truncation=True, max_length=2048
+        formatted_input, 
+        return_tensors="pt", 
+        padding=True,  # Allow padding
+        truncation=True, 
+        max_length=2048
     )
 
     with torch.no_grad():  # Disable gradient computation for efficiency
@@ -42,7 +50,7 @@ def generate_sql(query: QueryRequest):
             inputs.input_ids,
             attention_mask=inputs.attention_mask,
             max_new_tokens=200,  # Limit response length
-            pad_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.pad_token_id,  #  Fix: Uses new [PAD] token
             do_sample=False,  # Ensure deterministic output
             temperature=0,  # More stable SQL queries
             top_p=1.0
